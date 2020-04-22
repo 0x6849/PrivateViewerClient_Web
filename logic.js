@@ -10,6 +10,7 @@ const vidProgress = document.querySelector("#vidProgress");
 const txtVol = document.querySelector("#txtVol");
 const volume = document.querySelector("#volume");
 const resetSpeed = document.querySelector("#resetSpeed");
+const btnFullscreen = document.querySelector("#btnFullscreen");
 var socket;
 var lastState;
 var roomName = prompt("Enter room id", "r1");
@@ -19,8 +20,15 @@ function init() {
     for (var i = 0; i < vids.length; i++) {
         vids[i].volume = 0;
     }
-    if (!socketHost) {
-        hostname = prompt("Server URL", "wss://hostname:port");
+    if (typeof socketHost == "undefined") {
+        var template = localStorage.getItem("hostname");
+        if (!template) {
+            template = "wss://hostname:port";
+        }
+        while (!hostname) {
+            hostname = prompt("Server URL", template);
+        }
+        localStorage.setItem("hostname", hostname);
     } else {
         hostname = socketHost;
     }
@@ -34,6 +42,9 @@ function init() {
     vid.addEventListener("timeupdate", updateSlider);
     vid.addEventListener("ratechange", updateSpeedSlider);
     resetSpeed.addEventListener("click", resetToOne);
+    document.body.addEventListener("keydown", keyDown);
+    btnFullscreen.addEventListener("click", gotoFullscreen);
+    updateSlider();
     changeVolume();
     initSocket();
 }
@@ -65,18 +76,6 @@ function initSocket() {
 }
 
 function updateVideo(newState) {
-    if (newState["paused"] !== undefined) {
-        const newPaused = newState["paused"];
-        if (newPaused === true) {
-            for (var i = 0; i < vids.length; i++) {
-                vids[i].pause();
-            }
-        } else if (newPaused === false) {
-            for (var i = 0; i < vids.length; i++) {
-                vids[i].play();
-            }
-        }
-    }
     if (newState["timeStamp"] !== undefined) {
         const newTime = parseFloat(newState["timeStamp"]);
         if (isFinite(newTime) && newTime >= 0) {
@@ -85,6 +84,32 @@ function updateVideo(newState) {
                     vids[i].currentTime = newTime;
                 }
             }
+        }
+    }
+    if (newState["paused"] !== undefined) {
+        const newPaused = newState["paused"];
+        if (newPaused === true) {
+            for (var i = 0; i < vids.length; i++) {
+                vids[i].pause();
+            }
+            btnPause.classList.remove("btn-secondary");
+            btnPause.classList.add("btn-primary");
+            btnPlay.classList.add("btn-secondary");
+            btnPlay.classList.remove("btn-success");
+            if (vid.currentTime == 0) {
+                btnStop.classList.add("btn-danger");
+            } else {
+                btnStop.classList.remove("btn-danger");
+            }
+        } else if (newPaused === false) {
+            for (var i = 0; i < vids.length; i++) {
+                vids[i].play();
+            }
+            btnPause.classList.add("btn-secondary");
+            btnPause.classList.remove("btn-primary");
+            btnPlay.classList.remove("btn-secondary");
+            btnPlay.classList.add("btn-success");
+            btnStop.classList.remove("btn-danger");
         }
     }
     if (newState["playSpeed"] !== undefined) {
@@ -96,101 +121,6 @@ function updateVideo(newState) {
         }
     }
     lastState = newState;
-}
-
-function videoSeeked(e) {
-    lastState = undefined;
-    if (socket.readyState == WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-            "timeStamp": parseFloat(vidProgress.value) / 100.0 * vid.duration,
-            "action": "change"
-        }));
-    }
-}
-
-function videoPlayed(e) {
-    lastState = undefined;
-    socket.send(JSON.stringify({
-        "paused": false,
-        "action": "change"
-    }));
-}
-
-function videoPaused(e) {
-    lastState = undefined;
-    socket.send(JSON.stringify({
-        "paused": true,
-        "action": "change"
-    }));
-}
-
-function videoStopped(e) {
-    lastState = undefined;
-    socket.send(JSON.stringify({
-        "paused": true,
-        "timeStamp": 0,
-        "action": "change"
-    }));
-}
-
-function updateSlider(e) {
-    vidProgress.value = vid.currentTime / vid.duration * 100;
-    timestampLabel.innerText = timestampToString(vid.currentTime);
-}
-
-function updateSpeedSlider() {
-    speed.value = vid.playbackRate;
-    txtSpeed.innerText = parseFloat(speed.value).toFixed(1)
-}
-
-function changeSpeed() {
-    txtSpeed.innerText = parseFloat(speed.value).toFixed(1);
-    lastState = undefined;
-    socket.send(JSON.stringify({
-        "playSpeed": speed.value,
-        "action": "change"
-    }));
-}
-
-function inputSpeed() {
-    txtSpeed.innerText = parseFloat(speed.value).toFixed(1);
-}
-
-function changeVolume() {
-    txtVol.innerText = parseFloat(volume.value).toFixed(2);
-    vid.volume = parseFloat(volume.value);
-}
-
-function resetToOne() {
-    speed.value = 1;
-    changeSpeed();
-}
-
-function timestampToString(time) {
-    var isNeg = time < 0;
-    time = Math.abs(time);
-    var hours = Math.floor(time / 60.0 / 60.0);
-    time -= (hours * 60 * 60);
-    if (hours < 10) {
-        hours = "0" + hours;
-    } else {
-        hours = "" + hours;
-    }
-    var minutes = Math.floor(time / 60.0);
-    time -= (minutes * 60);
-    if (minutes < 10) {
-        minutes = "0" + minutes;
-    } else {
-        minutes = "" + minutes;
-    }
-    var seconds = time;
-    if (seconds < 10) {
-        seconds = "0" + seconds;
-    } else {
-        seconds = "" + seconds;
-    }
-    seconds = seconds.substr(0, 6);
-    return (isNeg ? "-" : "") + hours + ":" + minutes + ":" + seconds;
 }
 
 init();

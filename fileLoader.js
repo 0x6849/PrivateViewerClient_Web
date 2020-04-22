@@ -12,6 +12,7 @@ function file1Selected() {
         if (lastState) {
             updateVideo(lastState);
         }
+        updateSlider();
         vids[0].oncanplay = undefined;
     };
 }
@@ -22,6 +23,7 @@ function file2Selected() {
         if (lastState) {
             updateVideo(lastState);
         }
+        updateSlider();
         vids[1].oncanplay = undefined;
     };
 }
