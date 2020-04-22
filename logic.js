@@ -1,4 +1,4 @@
-const file = document.querySelector("#file");
+const vids = document.querySelectorAll("video");
 const vid = document.querySelector("video");
 const txtSpeed = document.querySelector("#txtSpeed");
 const speed = document.querySelector("#speed");
@@ -9,12 +9,21 @@ const timestampLabel = document.querySelector("#timestamp");
 const vidProgress = document.querySelector("#vidProgress");
 const txtVol = document.querySelector("#txtVol");
 const volume = document.querySelector("#volume");
+const resetSpeed = document.querySelector("#resetSpeed");
 var socket;
 var lastState;
 var roomName = prompt("Enter room id", "r1");
+var hostname;
 
 function init() {
-    file.addEventListener("change", fileSelected);
+    for (var i = 0; i < vids.length; i++) {
+        vids[i].volume = 0;
+    }
+    if (!socketHost) {
+        hostname = prompt("Server URL", "wss://hostname:port");
+    } else {
+        hostname = socketHost;
+    }
     speed.addEventListener("change", changeSpeed);
     speed.addEventListener("input", inputSpeed);
     volume.addEventListener("input", changeVolume);
@@ -22,13 +31,16 @@ function init() {
     btnPlay.addEventListener("click", videoPlayed);
     btnPause.addEventListener("click", videoPaused);
     btnStop.addEventListener("click", videoStopped);
-    video.addEventListener("timeupdate", updateSlider);
+    vid.addEventListener("timeupdate", updateSlider);
+    vid.addEventListener("ratechange", updateSpeedSlider);
+    resetSpeed.addEventListener("click", resetToOne);
+    changeVolume();
     initSocket();
 }
 
 function initSocket() {
     console.log("Connecting");
-    socket = new WebSocket(socketHost);
+    socket = new WebSocket(hostname);
     socket.addEventListener("open", () => {
         socket.send(JSON.stringify({
             "action": "join",
@@ -56,24 +68,31 @@ function updateVideo(newState) {
     if (newState["paused"] !== undefined) {
         const newPaused = newState["paused"];
         if (newPaused === true) {
-            programPaused = true;
-            vid.pause();
+            for (var i = 0; i < vids.length; i++) {
+                vids[i].pause();
+            }
         } else if (newPaused === false) {
-            programPlayed = true;
-            vid.play();
+            for (var i = 0; i < vids.length; i++) {
+                vids[i].play();
+            }
         }
     }
     if (newState["timeStamp"] !== undefined) {
         const newTime = parseFloat(newState["timeStamp"]);
         if (isFinite(newTime) && newTime >= 0) {
-            programSeeked = true;
-            vid.currentTime = newTime;
+            if (Math.abs(newTime - vid.currentTime) > 1) {
+                for (var i = 0; i < vids.length; i++) {
+                    vids[i].currentTime = newTime;
+                }
+            }
         }
     }
     if (newState["playSpeed"] !== undefined) {
         const newSpeed = parseFloat(newState["playSpeed"]);
         if (isFinite(newSpeed) && newSpeed >= 0) {
-            vid.playbackRate = newSpeed;
+            for (var i = 0; i < vids.length; i++) {
+                vids[i].playbackRate = newSpeed;
+            }
         }
     }
     lastState = newState;
@@ -115,8 +134,13 @@ function videoStopped(e) {
 }
 
 function updateSlider(e) {
-    //vidProgress.value = vid.currentTime / vid.duration * 100;
+    vidProgress.value = vid.currentTime / vid.duration * 100;
     timestampLabel.innerText = timestampToString(vid.currentTime);
+}
+
+function updateSpeedSlider() {
+    speed.value = vid.playbackRate;
+    txtSpeed.innerText = parseFloat(speed.value).toFixed(1)
 }
 
 function changeSpeed() {
@@ -124,7 +148,6 @@ function changeSpeed() {
     lastState = undefined;
     socket.send(JSON.stringify({
         "playSpeed": speed.value,
-        "timeStamp": 0,
         "action": "change"
     }));
 }
@@ -135,16 +158,12 @@ function inputSpeed() {
 
 function changeVolume() {
     txtVol.innerText = parseFloat(volume.value).toFixed(2);
+    vid.volume = parseFloat(volume.value);
 }
 
-function fileSelected() {
-    vid.src = URL.createObjectURL(file.files[0]);
-    vid.oncanplay = () => {
-        if (lastState) {
-            updateVideo(lastState);
-        }
-        vid.oncanplay = undefined;
-    };
+function resetToOne() {
+    speed.value = 1;
+    changeSpeed();
 }
 
 function timestampToString(time) {
