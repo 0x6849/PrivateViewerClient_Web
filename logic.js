@@ -117,6 +117,7 @@ function updateVideo(newState) {
         if (isFinite(newSpeed) && newSpeed >= 0) {
             for (var i = 0; i < vids.length; i++) {
                 vids[i].playbackRate = newSpeed;
+                inputSpeed();
             }
         }
     }
