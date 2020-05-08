@@ -39,12 +39,18 @@ function videoStopped(e) {
 
 function updateSlider(e) {
     var progress = vid.currentTime / vid.duration * 100;
-    vidProgress.value = progress;
-    timestampLabel.innerText = timestampToString(vid.currentTime);
-    timePercentLabel.innerText = progress.toFixed(2) + "%";
-    if (isFinite(vid.duration)) {
-        timestampLabel.innerText += "/" + timestampToString(vid.duration);
+    if (!isNaN(progress)) {
+        vidProgress.value = progress;
+        timestampLabel.innerText = timestampToString(vid.currentTime);
+        timePercentLabel.innerText = progress.toFixed(2) + "%";
+        if (isFinite(vid.duration)) {
+            timestampLabel.innerText += "/" + timestampToString(vid.duration);
+        }
+        return;
     }
+    vidProgress.value = 0;
+    timestampLabel.innerText = timestampToString(0);
+    timePercentLabel.innerText = "--%";
 }
 
 function updateSpeedSlider() {
