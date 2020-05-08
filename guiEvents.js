@@ -38,8 +38,10 @@ function videoStopped(e) {
 }
 
 function updateSlider(e) {
-    vidProgress.value = vid.currentTime / vid.duration * 100;
+    var progress = vid.currentTime / vid.duration * 100;
+    vidProgress.value = progress;
     timestampLabel.innerText = timestampToString(vid.currentTime);
+    timePercentLabel.innerText = progress.toFixed(2) + "%";
     if (isFinite(vid.duration)) {
         timestampLabel.innerText += "/" + timestampToString(vid.duration);
     }

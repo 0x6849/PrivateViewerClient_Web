@@ -11,6 +11,7 @@ const txtVol = document.querySelector("#txtVol");
 const volume = document.querySelector("#volume");
 const resetSpeed = document.querySelector("#resetSpeed");
 const btnFullscreen = document.querySelector("#btnFullscreen");
+const timePercentLabel = document.querySelector("#timePercent");
 var socket;
 var lastState;
 var roomName = prompt("Enter room id", "r1");
